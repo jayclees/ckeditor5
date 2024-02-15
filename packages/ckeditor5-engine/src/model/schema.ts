@@ -1893,8 +1893,6 @@ function compileBaseItemRule( sourceItemRules: Array<SchemaItemDefinition>, item
 
 	copyProperty( sourceItemRules, itemRule, 'allowChildren' );
 
-	copyProperty( sourceItemRules, itemRule, 'allowAttributes' );
-
 	copyProperty( sourceItemRules, itemRule, 'disallowChildren' );
 	copyProperty( sourceItemRules, itemRule, 'disallowAttributes' );
 

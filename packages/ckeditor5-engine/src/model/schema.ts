@@ -1414,6 +1414,16 @@ export interface SchemaItemDefinition {
 	allowAttributesOf?: string | Array<string>;
 
 	/**
+	 * Defines which other items are disallowed inside this item. Takes precedence over `allowChildren` and `allowContentOf`.
+	 */
+	disallowChildren?: string | Array<string>;
+
+	/**
+	 * Defines disallowed attributes for this item. Takes precedence over `allowAttributes` and `allowAttributesOf`.
+	 */
+	disallowAttributes?: string | Array<string>;
+
+	/**
 	 * Inherits `is*` properties of other items.
 	 */
 	inheritTypesFrom?: string | Array<string>;

@@ -952,6 +952,10 @@ export default class Schema extends ObservableMixin() {
 		}
 
 		for ( const itemName of itemNames ) {
+			compileDisallowAttributes( compiledDefinitions, itemName );
+		}
+
+		for ( const itemName of itemNames ) {
 			cleanUpAllowIn( compiledDefinitions, itemName );
 			setupAllowChildren( compiledDefinitions, itemName );
 			cleanUpAllowAttributes( compiledDefinitions, itemName );
@@ -1548,6 +1552,9 @@ interface SchemaCompiledItemDefinitionInternal {
 	allowChildren: Array<string>;
 	allowAttributes: Array<string>;
 
+	disallowChildren: Array<string>;
+	disallowAttributes: Array<string>;
+
 	allowAttributesOf?: Array<string>;
 	allowContentOf?: Array<string>;
 	allowWhere?: Array<string>;
@@ -1869,6 +1876,9 @@ function compileBaseItemRule( sourceItemRules: Array<SchemaItemDefinition>, item
 
 		allowChildren: [],
 
+		disallowChildren: [],
+		disallowAttributes: [],
+
 		inheritTypesFrom: []
 	};
 
@@ -1882,6 +1892,11 @@ function compileBaseItemRule( sourceItemRules: Array<SchemaItemDefinition>, item
 	copyProperty( sourceItemRules, itemRule, 'allowAttributesOf' );
 
 	copyProperty( sourceItemRules, itemRule, 'allowChildren' );
+
+	copyProperty( sourceItemRules, itemRule, 'allowAttributes' );
+
+	copyProperty( sourceItemRules, itemRule, 'disallowChildren' );
+	copyProperty( sourceItemRules, itemRule, 'disallowAttributes' );
 
 	copyProperty( sourceItemRules, itemRule, 'inheritTypesFrom' );
 
@@ -1965,6 +1980,21 @@ function compileAllowAttributesOf(
 	delete compiledDefinitions[ itemName ].allowAttributesOf;
 }
 
+function compileDisallowAttributes(
+	compiledDefinitions: Record<string, SchemaCompiledItemDefinitionInternal>,
+	itemName: string
+) {
+	const item = compiledDefinitions[ itemName ];
+	for ( const disallowedAttribute of item.disallowAttributes ) {
+		// Find the attribute in the item allowed list.
+		const disallowedAttributeIndex = item.allowAttributes.indexOf( disallowedAttribute );
+		if ( disallowedAttributeIndex !== -1 ) {
+			// If found, remove it from allowAttributes.
+			item.allowAttributes.splice( disallowedAttributeIndex, 1 );
+		}
+	}
+}
+
 function compileInheritPropertiesFrom(
 	compiledDefinitions: Record<string, SchemaCompiledItemDefinitionInternal>,
 	itemName: string
@@ -2042,6 +2072,8 @@ function copyProperty(
 		'allowAttributes' |
 		'allowAttributesOf' |
 		'allowChildren' |
+		'disallowAttributes' |
+		'disallowChildren' |
 		'inheritTypesFrom'
 ) {
 	for ( const sourceItemRule of sourceItemRules ) {

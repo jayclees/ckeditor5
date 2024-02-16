@@ -1910,14 +1910,14 @@ function compileAllowChildren(
 	const item = compiledDefinitions[ itemName ];
 
 	for ( const allowChildrenItem of item.allowChildren ) {
-		const allowedChildren = compiledDefinitions[ allowChildrenItem ];
+		const allowedChildDefinition = compiledDefinitions[ allowChildrenItem ];
 
 		// The allowChildren property may point to an unregistered element.
-		if ( !allowedChildren ) {
+		if ( !allowedChildDefinition ) {
 			continue;
 		}
 
-		allowedChildren.allowIn.push( itemName );
+		allowedChildDefinition.allowIn.push( itemName );
 	}
 
 	// The allowIn property already includes correct items, reset the allowChildren property

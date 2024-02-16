@@ -952,13 +952,18 @@ export default class Schema extends ObservableMixin() {
 		}
 
 		for ( const itemName of itemNames ) {
+			cleanUpAllowIn( compiledDefinitions, itemName );
+			setupAllowChildren( compiledDefinitions, itemName );
+			cleanUpAllowAttributes( compiledDefinitions, itemName );
+		}
+
+		// Run disallow rules after the deduplication cleanups.
+		for ( const itemName of itemNames ) {
 			compileDisallowAttributes( compiledDefinitions, itemName );
 		}
 
 		for ( const itemName of itemNames ) {
-			cleanUpAllowIn( compiledDefinitions, itemName );
-			setupAllowChildren( compiledDefinitions, itemName );
-			cleanUpAllowAttributes( compiledDefinitions, itemName );
+			compileDisallowChildren( compiledDefinitions, itemName );
 		}
 
 		this._compiledDefinitions = compiledDefinitions as any;
@@ -1893,8 +1898,8 @@ function compileBaseItemRule( sourceItemRules: Array<SchemaItemDefinition>, item
 
 	copyProperty( sourceItemRules, itemRule, 'allowChildren' );
 
-	copyProperty( sourceItemRules, itemRule, 'disallowChildren' );
 	copyProperty( sourceItemRules, itemRule, 'disallowAttributes' );
+	copyProperty( sourceItemRules, itemRule, 'disallowChildren' );
 
 	copyProperty( sourceItemRules, itemRule, 'inheritTypesFrom' );
 
@@ -1989,6 +1994,32 @@ function compileDisallowAttributes(
 		if ( disallowedAttributeIndex !== -1 ) {
 			// If found, remove it from allowAttributes.
 			item.allowAttributes.splice( disallowedAttributeIndex, 1 );
+		}
+	}
+}
+
+function compileDisallowChildren(
+	compiledDefinitions: Record<string, SchemaCompiledItemDefinitionInternal>,
+	itemName: string
+) {
+	const item = compiledDefinitions[ itemName ];
+	for ( const disallowedChild of item.disallowChildren ) {
+		const disallowedChildIndex = item.allowChildren.indexOf( disallowedChild );
+		if ( disallowedChildIndex !== -1 ) {
+			item.allowChildren.splice( disallowedChildIndex, 1 );
+		}
+
+		// Proceed to remove the item from the previously allowed children.
+		const allowedChildDefinition = compiledDefinitions[ disallowedChild ];
+
+		// The allowChildren property may point to an unregistered element.
+		if ( !allowedChildDefinition ) {
+			continue;
+		}
+
+		const allowedChildAllowInIndex = allowedChildDefinition.allowIn.indexOf( itemName );
+		if ( allowedChildAllowInIndex !== -1 ) {
+			allowedChildDefinition.allowIn.splice( allowedChildAllowInIndex, 1 );
 		}
 	}
 }

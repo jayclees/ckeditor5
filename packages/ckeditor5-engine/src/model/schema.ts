@@ -1939,7 +1939,6 @@ function compileAllowChildren(
 			continue;
 		}
 
-		console.log( allowChildrenItem, itemName );
 		allowedChildDefinition.allowIn.push( itemName );
 	}
 

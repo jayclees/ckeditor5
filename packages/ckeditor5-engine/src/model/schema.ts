@@ -966,6 +966,10 @@ export default class Schema extends ObservableMixin() {
 			compileDisallowChildren( compiledDefinitions, itemName );
 		}
 
+		for ( const itemName of itemNames ) {
+			compileDisallowIn( compiledDefinitions, itemName );
+		}
+
 		this._compiledDefinitions = compiledDefinitions as any;
 	}
 
@@ -1423,7 +1427,12 @@ export interface SchemaItemDefinition {
 	allowAttributesOf?: string | Array<string>;
 
 	/**
-	 * Defines which other items are disallowed inside this item. Takes precedence over `allowChildren` and `allowContentOf`.
+	 * Defines in which other items this item will be disallowed. Takes precedence over `allowChildren`, `allowIn` and `allowContentOf`.
+	 */
+	disallowIn?: string | Array<string>;
+
+	/**
+	 * Defines which other items are disallowed inside this item. Takes precedence over `allowChildren`, `allowIn` and `allowContentOf`.
 	 */
 	disallowChildren?: string | Array<string>;
 
@@ -1557,8 +1566,9 @@ interface SchemaCompiledItemDefinitionInternal {
 	allowChildren: Array<string>;
 	allowAttributes: Array<string>;
 
-	disallowChildren: Array<string>;
-	disallowAttributes: Array<string>;
+	disallowIn?: Array<string>;
+	disallowChildren?: Array<string>;
+	disallowAttributes?: Array<string>;
 
 	allowAttributesOf?: Array<string>;
 	allowContentOf?: Array<string>;
@@ -1881,6 +1891,7 @@ function compileBaseItemRule( sourceItemRules: Array<SchemaItemDefinition>, item
 
 		allowChildren: [],
 
+		disallowIn: [],
 		disallowChildren: [],
 		disallowAttributes: [],
 
@@ -1900,6 +1911,7 @@ function compileBaseItemRule( sourceItemRules: Array<SchemaItemDefinition>, item
 
 	copyProperty( sourceItemRules, itemRule, 'disallowAttributes' );
 	copyProperty( sourceItemRules, itemRule, 'disallowChildren' );
+	copyProperty( sourceItemRules, itemRule, 'disallowIn' );
 
 	copyProperty( sourceItemRules, itemRule, 'inheritTypesFrom' );
 
@@ -1988,7 +2000,7 @@ function compileDisallowAttributes(
 	itemName: string
 ) {
 	const item = compiledDefinitions[ itemName ];
-	for ( const disallowedAttribute of item.disallowAttributes ) {
+	for ( const disallowedAttribute of item.disallowAttributes! ) {
 		// Find the attribute in the item allowed list.
 		const disallowedAttributeIndex = item.allowAttributes.indexOf( disallowedAttribute );
 		if ( disallowedAttributeIndex !== -1 ) {
@@ -2003,7 +2015,7 @@ function compileDisallowChildren(
 	itemName: string
 ) {
 	const item = compiledDefinitions[ itemName ];
-	for ( const disallowedChild of item.disallowChildren ) {
+	for ( const disallowedChild of item.disallowChildren! ) {
 		const disallowedChildIndex = item.allowChildren.indexOf( disallowedChild );
 		if ( disallowedChildIndex !== -1 ) {
 			item.allowChildren.splice( disallowedChildIndex, 1 );
@@ -2020,6 +2032,33 @@ function compileDisallowChildren(
 		const allowedChildAllowInIndex = allowedChildDefinition.allowIn.indexOf( itemName );
 		if ( allowedChildAllowInIndex !== -1 ) {
 			allowedChildDefinition.allowIn.splice( allowedChildAllowInIndex, 1 );
+		}
+	}
+}
+
+function compileDisallowIn(
+	compiledDefinitions: Record<string, SchemaCompiledItemDefinitionInternal>,
+	itemName: string
+) {
+	const itemRule = compiledDefinitions[ itemName ];
+
+	for ( const disallowedInItemName of itemRule.disallowIn! ) {
+		const disallowedInItem = compiledDefinitions[ disallowedInItemName ];
+
+		if ( !disallowedInItem ) {
+			continue;
+		}
+
+		// Look for the item in the "parent" element to disallow it as a children there.
+		const childItemIndexToDisallow = disallowedInItem.allowChildren.indexOf( itemName );
+		if ( childItemIndexToDisallow !== -1 ) {
+			disallowedInItem.allowChildren.splice( childItemIndexToDisallow, 1 );
+		}
+
+		// Next, check within the rule-originating element itself to remove disallowed "parent" element.
+		const disallowedInIndex = itemRule.allowIn.indexOf( disallowedInItemName );
+		if ( disallowedInIndex !== -1 ) {
+			itemRule.allowIn.splice( disallowedInIndex, 1 );
 		}
 	}
 }
@@ -2103,6 +2142,7 @@ function copyProperty(
 		'allowChildren' |
 		'disallowAttributes' |
 		'disallowChildren' |
+		'disallowIn' |
 		'inheritTypesFrom'
 ) {
 	for ( const sourceItemRule of sourceItemRules ) {

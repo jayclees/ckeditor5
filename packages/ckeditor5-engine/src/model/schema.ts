@@ -1926,7 +1926,12 @@ function compileAllowChildren(
 ) {
 	const item = compiledDefinitions[ itemName ];
 
-	for ( const allowChildrenItem of item.allowChildren ) {
+	for ( const [ allowedChildIndex, allowChildrenItem ] of item.allowChildren.entries() ) {
+		if ( item.disallowChildren?.find( child => child === allowChildrenItem ) ) {
+			item.allowChildren.splice( allowedChildIndex, 1 );
+			continue;
+		}
+
 		const allowedChildDefinition = compiledDefinitions[ allowChildrenItem ];
 
 		// The allowChildren property may point to an unregistered element.
@@ -1934,6 +1939,7 @@ function compileAllowChildren(
 			continue;
 		}
 
+		console.log( allowChildrenItem, itemName );
 		allowedChildDefinition.allowIn.push( itemName );
 	}
 
@@ -1969,9 +1975,12 @@ function compileAllowWhere(
 
 		// The allowWhere property may point to an unregistered element.
 		if ( inheritFrom ) {
-			const allowedIn = inheritFrom.allowIn;
+			const inheritedAllowedIn = inheritFrom.allowIn
+				.filter( allowedItem => !inheritFrom.disallowIn!.find( disallowedItem => disallowedItem === allowedItem ) )
+				.filter( allowedItem => !compiledDefinitions[ allowedItem ].disallowChildren!.find( child => child === itemName ) );
 
-			compiledDefinitions[ itemName ].allowIn.push( ...allowedIn );
+			console.log( 'allowwhere:', itemName, allowWhereItemName, JSON.stringify( inheritedAllowedIn ) );
+			compiledDefinitions[ itemName ].allowIn.push( ...inheritedAllowedIn );
 		}
 	}
 
@@ -2008,6 +2017,8 @@ function compileDisallowAttributes(
 			item.allowAttributes.splice( disallowedAttributeIndex, 1 );
 		}
 	}
+
+	delete item.disallowAttributes;
 }
 
 function compileDisallowChildren(
@@ -2034,6 +2045,8 @@ function compileDisallowChildren(
 			allowedChildDefinition.allowIn.splice( allowedChildAllowInIndex, 1 );
 		}
 	}
+
+	delete item.disallowChildren;
 }
 
 function compileDisallowIn(
@@ -2061,6 +2074,8 @@ function compileDisallowIn(
 			itemRule.allowIn.splice( disallowedInIndex, 1 );
 		}
 	}
+
+	delete itemRule.disallowIn;
 }
 
 function compileInheritPropertiesFrom(
@@ -2172,7 +2187,9 @@ function makeInheritAllWork( sourceItemRules: Array<SchemaItemDefinition>, itemR
 function getAllowedChildren( compiledDefinitions: Record<string, SchemaCompiledItemDefinitionInternal>, itemName: string ) {
 	const itemRule = compiledDefinitions[ itemName ];
 
-	return getValues( compiledDefinitions ).filter( def => def.allowIn.includes( itemRule.name ) );
+	return getValues( compiledDefinitions )
+		.filter( def => def.allowIn.includes( itemRule.name ) )
+		.filter( def => !itemRule.disallowChildren!.find( childName => childName === def.name ) );
 }
 
 function getValues( obj: Record<string, SchemaCompiledItemDefinitionInternal> ) {

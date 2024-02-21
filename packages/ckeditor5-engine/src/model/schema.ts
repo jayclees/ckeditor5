@@ -950,9 +950,10 @@ export default class Schema extends ObservableMixin() {
 			compileAllowWhere( compiledDefinitions, itemName );
 		}
 
-		for ( const itemName of itemNames ) {
-			compileDisallowIn( compiledDefinitions, itemName );
-		}
+		// REMOVE
+		// for ( const itemName of itemNames ) {
+		// 	compileDisallowIn( compiledDefinitions, itemName );
+		// }
 
 		for ( const itemName of itemNames ) {
 			clearAfterChildrenProcessing( compiledDefinitions, itemName );
@@ -1929,7 +1930,8 @@ function clearAfterChildrenProcessing(
 	itemName: string
 ) {
 	compiledDefinitions[ itemName ].allowChildren.length = 0;
-	delete compiledDefinitions[ itemName ].disallowChildren; // .length = 0;
+	delete compiledDefinitions[ itemName ].disallowChildren;
+	delete compiledDefinitions[ itemName ].disallowIn;
 }
 
 function compileAllowChildren(
@@ -2002,7 +2004,7 @@ function compileDisallowChildren(
 ) {
 	const item = compiledDefinitions[ itemName ];
 	for ( const disallowedChild of item.disallowChildren! ) {
-		const disallowedChildIndex = item.allowChildren.indexOf( disallowedChild );
+		// const disallowedChildIndex = item.allowChildren.indexOf( disallowedChild );
 		// REMOVE
 		// if ( disallowedChildIndex !== -1 ) {
 		// 	item.allowChildren.splice( disallowedChildIndex, 1 );
@@ -2018,10 +2020,11 @@ function compileDisallowChildren(
 
 		disallowedChildDefinition.disallowIn!.push( itemName );
 
-		const allowedChildAllowInIndex = disallowedChildDefinition.allowIn.indexOf( itemName );
-		if ( allowedChildAllowInIndex !== -1 ) {
-			// disallowedChildDefinition.allowIn.splice( allowedChildAllowInIndex, 1 );
-		}
+		// REMOVE
+		// const allowedChildAllowInIndex = disallowedChildDefinition.allowIn.indexOf( itemName );
+		// if ( allowedChildAllowInIndex !== -1 ) {
+		// disallowedChildDefinition.allowIn.splice( allowedChildAllowInIndex, 1 );
+		// }
 	}
 }
 
@@ -2041,7 +2044,7 @@ function compileDisallowIn(
 		// Look for the item in the "parent" element to disallow it as a children there.
 		const childItemIndexToDisallow = disallowedInItem.allowChildren.indexOf( itemName );
 		if ( childItemIndexToDisallow !== -1 ) {
-			disallowedInItem.allowChildren.splice( childItemIndexToDisallow, 1 );
+			// disallowedInItem.allowChildren.splice( childItemIndexToDisallow, 1 );
 		}
 
 		// Next, check within the rule-originating element itself to remove disallowed "parent" element.
@@ -2065,8 +2068,8 @@ function compileAllowWhere(
 		}
 
 		// Get all inherited allowedIn items, without:
-		//  - items specified in item's own `disallowIn` list,
-		//  - items for which the `disallowChildren` list contains this item.
+		//  - filter 1: items specified in item's own `disallowIn` list,
+		//  - filter 2: items for which the `disallowChildren` list contains this item.
 		const inheritedAllowedIn = inheritFrom.allowIn
 			.filter( allowedItem =>
 				!( compiledDefinitions[ itemName ].disallowIn!.find( disallowedItem => disallowedItem === allowedItem ) ) )

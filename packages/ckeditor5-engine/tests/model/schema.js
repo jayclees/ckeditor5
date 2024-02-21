@@ -2942,6 +2942,66 @@ describe( 'Schema', () => {
 			} );
 		} );
 
+		describe( 'disallow rules', () => {
+			it( 'disallows paragraph on a $root via disallowChildren rule', () => {
+				schema.register( '$root', {
+					disallowChildren: [ 'paragraph' ]
+				} );
+
+				schema.register( 'paragraph', {
+					allowIn: '$root'
+				} );
+
+				expect( schema.checkChild( root1, r1p1 ) ).to.be.false;
+			} );
+
+			it( 'disallows paragraphs on root elements via disallowIn rule', () => {
+				schema.register( '$root', { allowChildren: [ 'paragraph' ] } );
+				schema.register( '$root2', { allowChildren: [ 'paragraph' ] } );
+				schema.register( 'paragraph', {
+					disallowIn: [ '$root', '$root2' ]
+				} );
+
+				expect( schema.checkChild( root1, r1p1 ) ).to.be.false;
+				expect( schema.checkChild( root2, r1p1 ) ).to.be.false;
+			} );
+
+			it( 'disallows paragraph on a $root even though there is also an allowChildren rule', () => {
+				schema.register( '$root', {
+					allowChildren: [ 'paragraph' ],
+					disallowChildren: [ 'paragraph' ]
+				} );
+
+				schema.register( 'paragraph' );
+
+				expect( schema.checkChild( root1, r1p1 ) ).to.be.false;
+			} );
+
+			it( 'disallows paragraphs in root even though there is also an allowed rule', () => {
+				schema.register( '$root' );
+				schema.register( 'paragraph', {
+					allowIn: [ '$root' ],
+					disallowIn: [ '$root' ]
+				} );
+
+				expect( schema.checkChild( root1, r1p1 ) ).to.be.false;
+			} );
+
+			// plain disallow
+			// disallow all inherited disallowed items
+			// disallow item inheriting some allowIns, when one of the allowIn items disallows the specific item (like imageInline)
+			//   via disallowChildren
+			// disallow item inheriting allowChildren, when one of the allowChildren items disallows to be placed in the spec. item
+			//   via disallowIn
+			// allow again some item when inherited disallow, but in the item it is allowed again allowChildren
+			// allow again also inheriting items (B from A) on an inherited item (Z from Y) if this item (Z) reallows parent item (A)
+
+			// whole stuff with disallow attributes
+			// disallow when attribute is plain disallowed
+			// disallow when inherited attribute is disallowed in item
+			// do not inherit disallowed attributes from parent def
+		} );
+
 		// We need to handle cases where some independent features registered definitions which might use
 		// optional elements (elements which might not have been registered).
 		describe( 'missing structure definitions', () => {

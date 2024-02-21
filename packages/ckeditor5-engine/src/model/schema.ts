@@ -959,20 +959,21 @@ export default class Schema extends ObservableMixin() {
 			clearAfterChildrenProcessing( compiledDefinitions, itemName );
 		}
 
+		// Run disallow rules after the deduplication cleanups.
+		for ( const itemName of itemNames ) {
+			compileDisallowAttributes( compiledDefinitions, itemName );
+		}
+
 		for ( const itemName of itemNames ) {
 			compileAllowAttributesOf( compiledDefinitions, itemName );
 			compileInheritPropertiesFrom( compiledDefinitions, itemName );
 		}
 
 		for ( const itemName of itemNames ) {
+			clearAfterAttributes( compiledDefinitions, itemName );
 			cleanUpAllowIn( compiledDefinitions, itemName );
 			setupAllowChildren( compiledDefinitions, itemName );
 			cleanUpAllowAttributes( compiledDefinitions, itemName );
-		}
-
-		// Run disallow rules after the deduplication cleanups.
-		for ( const itemName of itemNames ) {
-			compileDisallowAttributes( compiledDefinitions, itemName );
 		}
 
 		this._compiledDefinitions = compiledDefinitions as any;
@@ -1934,6 +1935,13 @@ function clearAfterChildrenProcessing(
 	delete compiledDefinitions[ itemName ].disallowIn;
 }
 
+function clearAfterAttributes(
+	compiledDefinitions: Record<string, SchemaCompiledItemDefinitionInternal>,
+	itemName: string
+) {
+	delete compiledDefinitions[ itemName ].disallowAttributes;
+}
+
 function compileAllowChildren(
 	compiledDefinitions: Record<string, SchemaCompiledItemDefinitionInternal>,
 	itemName: string
@@ -2028,33 +2036,6 @@ function compileDisallowChildren(
 	}
 }
 
-function compileDisallowIn(
-	compiledDefinitions: Record<string, SchemaCompiledItemDefinitionInternal>,
-	itemName: string
-) {
-	const itemRule = compiledDefinitions[ itemName ];
-
-	for ( const disallowedInItemName of itemRule.disallowIn! ) {
-		const disallowedInItem = compiledDefinitions[ disallowedInItemName ];
-
-		if ( !disallowedInItem ) {
-			continue;
-		}
-
-		// Look for the item in the "parent" element to disallow it as a children there.
-		const childItemIndexToDisallow = disallowedInItem.allowChildren.indexOf( itemName );
-		if ( childItemIndexToDisallow !== -1 ) {
-			// disallowedInItem.allowChildren.splice( childItemIndexToDisallow, 1 );
-		}
-
-		// Next, check within the rule-originating element itself to remove disallowed "parent" element.
-		const disallowedInIndex = itemRule.allowIn.indexOf( disallowedInItemName );
-		if ( disallowedInIndex !== -1 ) {
-			// itemRule.allowIn.splice( disallowedInIndex, 1 );
-		}
-	}
-}
-
 function compileAllowWhere(
 	compiledDefinitions: Record<string, SchemaCompiledItemDefinitionInternal>,
 	itemName: string
@@ -2084,6 +2065,17 @@ function compileAllowWhere(
 	delete compiledDefinitions[ itemName ].allowWhere;
 }
 
+function compileDisallowAttributes(
+	compiledDefinitions: Record<string, SchemaCompiledItemDefinitionInternal>,
+	itemName: string
+) {
+	const item = compiledDefinitions[ itemName ];
+	for ( const disallowedAttribute of item.disallowAttributes! ) {
+		// Remove all the disallowed attributes from the own allowed attributes list.
+		item.allowAttributes = item.allowAttributes.filter( attr => attr !== disallowedAttribute );
+	}
+}
+
 function compileAllowAttributesOf(
 	compiledDefinitions: Record<string, SchemaCompiledItemDefinitionInternal>,
 	itemName: string
@@ -2092,30 +2084,15 @@ function compileAllowAttributesOf(
 		const inheritFrom = compiledDefinitions[ allowAttributeOfItem ];
 
 		if ( inheritFrom ) {
-			const inheritAttributes = inheritFrom.allowAttributes;
+			// Filter out any inherited attribute that is disallowed in this (inheriting) item.
+			const inheritAttributes = inheritFrom.allowAttributes
+				.filter( attr => compiledDefinitions[ itemName ].disallowAttributes!.indexOf( attr ) === -1 );
 
 			compiledDefinitions[ itemName ].allowAttributes.push( ...inheritAttributes );
 		}
 	}
 
 	delete compiledDefinitions[ itemName ].allowAttributesOf;
-}
-
-function compileDisallowAttributes(
-	compiledDefinitions: Record<string, SchemaCompiledItemDefinitionInternal>,
-	itemName: string
-) {
-	const item = compiledDefinitions[ itemName ];
-	for ( const disallowedAttribute of item.disallowAttributes! ) {
-		// Find the attribute in the item allowed list.
-		const disallowedAttributeIndex = item.allowAttributes.indexOf( disallowedAttribute );
-		if ( disallowedAttributeIndex !== -1 ) {
-			// If found, remove it from allowAttributes.
-			item.allowAttributes.splice( disallowedAttributeIndex, 1 );
-		}
-	}
-
-	delete item.disallowAttributes;
 }
 
 function compileInheritPropertiesFrom(

@@ -942,6 +942,11 @@ export default class Schema extends ObservableMixin() {
 			compileDisallowChildren( compiledDefinitions, itemName );
 		}
 
+		// REMOVE
+		for ( const itemName of itemNames ) {
+			compileDisallowIn( compiledDefinitions, itemName );
+		}
+
 		for ( const itemName of itemNames ) {
 			compileAllowContentOf( compiledDefinitions, itemName );
 		}
@@ -949,11 +954,6 @@ export default class Schema extends ObservableMixin() {
 		for ( const itemName of itemNames ) {
 			compileAllowWhere( compiledDefinitions, itemName );
 		}
-
-		// REMOVE
-		// for ( const itemName of itemNames ) {
-		// 	compileDisallowIn( compiledDefinitions, itemName );
-		// }
 
 		for ( const itemName of itemNames ) {
 			clearAfterChildrenProcessing( compiledDefinitions, itemName );
@@ -2028,11 +2028,37 @@ function compileDisallowChildren(
 
 		disallowedChildDefinition.disallowIn!.push( itemName );
 
-		// REMOVE
-		// const allowedChildAllowInIndex = disallowedChildDefinition.allowIn.indexOf( itemName );
-		// if ( allowedChildAllowInIndex !== -1 ) {
-		// disallowedChildDefinition.allowIn.splice( allowedChildAllowInIndex, 1 );
-		// }
+		const allowedChildAllowInIndex = disallowedChildDefinition.allowIn.indexOf( itemName );
+		if ( allowedChildAllowInIndex !== -1 ) {
+			disallowedChildDefinition.allowIn.splice( allowedChildAllowInIndex, 1 );
+		}
+	}
+}
+
+function compileDisallowIn(
+	compiledDefinitions: Record<string, SchemaCompiledItemDefinitionInternal>,
+	itemName: string
+) {
+	const itemRule = compiledDefinitions[ itemName ];
+
+	for ( const disallowedInItemName of itemRule.disallowIn! ) {
+		const disallowedInItem = compiledDefinitions[ disallowedInItemName ];
+
+		if ( !disallowedInItem ) {
+			continue;
+		}
+
+		// Look for the item in the "parent" element to disallow it as a children there.
+		const childItemIndexToDisallow = disallowedInItem.allowChildren.indexOf( itemName );
+		if ( childItemIndexToDisallow !== -1 ) {
+			disallowedInItem.allowChildren.splice( childItemIndexToDisallow, 1 );
+		}
+
+		// Next, check within the rule-originating element itself to remove disallowed "parent" element.
+		const disallowedInIndex = itemRule.allowIn.indexOf( disallowedInItemName );
+		if ( disallowedInIndex !== -1 ) {
+			itemRule.allowIn.splice( disallowedInIndex, 1 );
+		}
 	}
 }
 

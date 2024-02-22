@@ -942,7 +942,6 @@ export default class Schema extends ObservableMixin() {
 			compileDisallowChildren( compiledDefinitions, itemName );
 		}
 
-		// REMOVE
 		for ( const itemName of itemNames ) {
 			compileDisallowIn( compiledDefinitions, itemName );
 		}
@@ -1970,7 +1969,9 @@ function compileAllowContentOf(
 	compiledDefinitions: Record<string, SchemaCompiledItemDefinitionInternal>,
 	itemName: string
 ) {
-	for ( const allowContentOfItemName of compiledDefinitions[ itemName ].allowContentOf! ) {
+	const itemRule = compiledDefinitions[ itemName ];
+
+	for ( const allowContentOfItemName of itemRule.allowContentOf! ) {
 		// The allowContentOf property may point to an unregistered element.
 		const inheritFromItem = compiledDefinitions[ allowContentOfItemName ];
 		if ( !inheritFromItem ) {
@@ -1980,15 +1981,20 @@ function compileAllowContentOf(
 		const inheritedAllowedChildren = getAllowedChildren( compiledDefinitions, allowContentOfItemName );
 		const inheritedDisallowedChildren = inheritFromItem.disallowChildren;
 
-		// First, add the item to each inherited allowed child.
-		inheritedAllowedChildren.forEach( allowedItem => {
-			allowedItem.allowIn.push( itemName );
-		} );
+		// First, add the item to each inherited allowed child, except:
+		// - the ones which are explicitly disallowed in the item,
+		// - the ones which have own disallowIn rule for this item.
+		inheritedAllowedChildren
+			.filter( allowedChildItem => itemRule.disallowChildren!.indexOf( allowedChildItem.name ) === -1 )
+			.filter( allowedChildItem => allowedChildItem.disallowIn!.indexOf( itemName ) === -1 )
+			.forEach( allowedItem => {
+				allowedItem.allowIn.push( itemName );
+			} );
 
 		// And then, run inherited disallowChildren rules to remove this item from them.
 		// Additionally, keep higher priority on the item's own allowChildren rules over inherited disallowChildren.
 		inheritedDisallowedChildren
-			?.filter( disallowedItemName => compiledDefinitions[ itemName ].allowChildren.indexOf( disallowedItemName ) === -1 )
+			?.filter( disallowedItemName => itemRule.allowChildren.indexOf( disallowedItemName ) === -1 )
 			.forEach( disallowedItemName => {
 				const disallowedItem = compiledDefinitions[ disallowedItemName ];
 				if ( disallowedItem ) {

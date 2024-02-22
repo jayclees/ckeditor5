@@ -2005,12 +2005,12 @@ describe( 'Schema', () => {
 				expect( getData( model, { withoutSelection: true } ) )
 					.to.equal(
 						'<div>' +
-							'<paragraph a="1">' +
-								'<$text b="1">foo</$text>' +
-								'<imageBlock b="1"></imageBlock>' +
-							'</paragraph>' +
-							'<$text a="1">bar</$text>' +
-							'<imageBlock a="1"></imageBlock>' +
+						'<paragraph a="1">' +
+						'<$text b="1">foo</$text>' +
+						'<imageBlock b="1"></imageBlock>' +
+						'</paragraph>' +
+						'<$text a="1">bar</$text>' +
+						'<imageBlock a="1"></imageBlock>' +
 						'</div>'
 					);
 			} );
@@ -2179,7 +2179,7 @@ describe( 'Schema', () => {
 
 			const attributesWithProperty = schema.getAttributesWithProperty( root.getChild( 0 ), 'isBarable' );
 
-			expect( attributesWithProperty ).to.deep.equal( { } );
+			expect( attributesWithProperty ).to.deep.equal( {} );
 		} );
 
 		it( 'should not return an attribute if it does not have given property', () => {
@@ -2191,7 +2191,7 @@ describe( 'Schema', () => {
 
 			const attributesWithProperty = schema.getAttributesWithProperty( root.getChild( 0 ), 'isFooable' );
 
-			expect( attributesWithProperty ).to.deep.equal( { } );
+			expect( attributesWithProperty ).to.deep.equal( {} );
 		} );
 
 		it( 'should not return an attribute if value does not match', () => {
@@ -2207,7 +2207,7 @@ describe( 'Schema', () => {
 
 			const attributesWithProperty = schema.getAttributesWithProperty( root.getChild( 0 ), 'isFooable', 'yes' );
 
-			expect( attributesWithProperty ).to.deep.equal( { } );
+			expect( attributesWithProperty ).to.deep.equal( {} );
 		} );
 
 		it( 'should return only an attribute that matches value', () => {
@@ -2544,7 +2544,7 @@ describe( 'Schema', () => {
 			} );
 
 			it( 'passes $root>paragraph and $root2>paragraph – where $root2 inherits content of $root' +
-			'and paragraph inherits allowWhere from $block', () => {
+				'and paragraph inherits allowWhere from $block', () => {
 				schema.register( '$root' );
 				schema.register( '$root2', {
 					allowContentOf: '$root'
@@ -2943,7 +2943,39 @@ describe( 'Schema', () => {
 		} );
 
 		describe( 'disallow rules', () => {
-			it( 'disallows paragraph on a $root via disallowChildren rule', () => {
+			it( 'disallows paragraph in a blockQuote with disallowChildren rule', () => {
+				schema.register( '$root' );
+
+				schema.register( 'blockQuote', {
+					allowIn: [ '$root' ],
+					allowContentOf: [ '$root' ],
+					disallowChildren: [ 'paragraph' ]
+				} );
+
+				schema.register( 'paragraph', {
+					allowIn: '$root'
+				} );
+
+				expect( schema.checkChild( r1bQ, r1bQp ) ).to.be.false;
+			} );
+
+			it( 'disallows paragraph in a blockQuote with disallowIn rule', () => {
+				schema.register( '$root' );
+
+				schema.register( 'blockQuote', {
+					allowIn: [ '$root' ],
+					allowContentOf: [ '$root' ]
+				} );
+
+				schema.register( 'paragraph', {
+					allowIn: '$root',
+					disallowIn: 'blockQuote'
+				} );
+
+				expect( schema.checkChild( r1bQ, r1bQp ) ).to.be.false;
+			} );
+
+			it( 'disallows previously allowed paragraph on a $root via disallowChildren rule', () => {
 				schema.register( '$root', {
 					disallowChildren: [ 'paragraph' ]
 				} );
@@ -2955,7 +2987,7 @@ describe( 'Schema', () => {
 				expect( schema.checkChild( root1, r1p1 ) ).to.be.false;
 			} );
 
-			it( 'disallows paragraphs on root elements via disallowIn rule', () => {
+			it( 'disallows previously allowed paragraphs on root elements via disallowIn rule', () => {
 				schema.register( '$root', { allowChildren: [ 'paragraph' ] } );
 				schema.register( '$root2', { allowChildren: [ 'paragraph' ] } );
 				schema.register( 'paragraph', {
@@ -2977,7 +3009,7 @@ describe( 'Schema', () => {
 				expect( schema.checkChild( root1, r1p1 ) ).to.be.false;
 			} );
 
-			it( 'disallows paragraphs in root even though there is also an allowed rule', () => {
+			it( 'disallows paragraphs in root even though there is also an allowIn rule', () => {
 				schema.register( '$root' );
 				schema.register( 'paragraph', {
 					allowIn: [ '$root' ],
@@ -2987,8 +3019,78 @@ describe( 'Schema', () => {
 				expect( schema.checkChild( root1, r1p1 ) ).to.be.false;
 			} );
 
-			// plain disallow
-			// disallow all inherited disallowed items
+			it( 'disallows descendant elements in root with disallowIn', () => {
+				schema.register( '$root', {} );
+				schema.register( 'baseElem', {
+					disallowIn: [ '$root' ]
+				} );
+				schema.register( 'descendant1', { inheritAllFrom: 'baseElem' } );
+				schema.register( 'descendant2', { inheritAllFrom: 'descendant1' } );
+				root1._appendChild( 'descendant1' );
+				root1._appendChild( 'descendant2' );
+				const descElem1 = new Element( 'descendant1' );
+				const descElem2 = new Element( 'descendant2' );
+
+				expect( schema.checkChild( root1, descElem1 ) ).to.be.false;
+				expect( schema.checkChild( root1, descElem2 ) ).to.be.false;
+			} );
+
+			it( 'disallows descendant elements in root with disallowChildren', () => {
+				schema.register( '$root', {
+					disallowChildren: [ 'baseElem' ]
+				} );
+				schema.register( 'baseElem', {
+				} );
+				schema.register( 'descendant1', { inheritAllFrom: 'baseElem' } );
+				schema.register( 'descendant2', { inheritAllFrom: 'descendant1' } );
+
+				const descElem1 = new Element( 'descendant1' );
+				const descElem2 = new Element( 'descendant2' );
+				root1._appendChild( descElem1 );
+				root1._appendChild( descElem2 );
+
+				expect( schema.checkChild( root1, descElem1 ) ).to.be.false;
+				expect( schema.checkChild( root1, descElem2 ) ).to.be.false;
+			} );
+
+			it( 'should disallow inlineSpecificItem in inherited definitions but allow the base $inlineElement', () => {
+				schema.register( '$root' );
+
+				/* The case here: ensure that item inheriting from some base item
+				 * is disallowed in other items which disallow it (prevent from inheriting allows and omitting specific disallows).
+				 */
+
+				schema.register( '$base', {
+					allowChildren: [ '$inlineElement' ],
+					allowIn: '$root'
+				} );
+				schema.register( '$inlineElement', {
+					allowIn: '$root'
+				} );
+				schema.register( 'inlineSpecificItem', {
+					inheritAllFrom: '$inlineElement'
+				} );
+				schema.register( 'paragraph', { inheritAllFrom: '$base', disallowChildren: 'inlineSpecificItem' } );
+				schema.register( 'paragraphDescendantA', { inheritAllFrom: 'paragraph' } );
+				schema.register( 'paragraphDescendantB', { inheritAllFrom: 'paragraphDescendantA' } );
+
+				const inlineElem = new Element( '$inlineElement' );
+				const inlineSpecific = new Element( 'inlineSpecificItem' );
+				const pA = new Element( 'paragraphDescendantA' );
+				const pB = new Element( 'paragraphDescendantB' );
+
+				root1._appendChild( pA );
+				root1._appendChild( pB );
+				pA._appendChild( inlineElem );
+				pA._appendChild( inlineSpecific );
+				pB._appendChild( inlineElem );
+				pB._appendChild( inlineSpecific );
+
+				expect( schema.checkChild( pA, inlineElem ) ).to.be.true;
+				expect( schema.checkChild( pA, inlineSpecific ) ).to.be.false;
+				expect( schema.checkChild( pB, inlineElem ) ).to.be.true;
+				expect( schema.checkChild( pB, inlineSpecific ) ).to.be.false;
+			} );
 			// disallow item inheriting some allowIns, when one of the allowIn items disallows the specific item (like imageInline)
 			//   via disallowChildren
 			// disallow item inheriting allowChildren, when one of the allowChildren items disallows to be placed in the spec. item

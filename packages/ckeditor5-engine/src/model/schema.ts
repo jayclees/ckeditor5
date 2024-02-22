@@ -1949,7 +1949,7 @@ function compileAllowChildren(
 
 	for ( const [ allowedChildIndex, allowChildrenItem ] of item.allowChildren.entries() ) {
 		// Immediately remove item from `allowChildren` if it's in `disallowChildren` too.
-		if ( item.disallowChildren?.find( child => child === allowChildrenItem ) ) {
+		if ( item.disallowChildren!.find( child => child === allowChildrenItem ) ) {
 			item.allowChildren.splice( allowedChildIndex, 1 );
 			continue;
 		}
@@ -1993,8 +1993,8 @@ function compileAllowContentOf(
 
 		// And then, run inherited disallowChildren rules to remove this item from them.
 		// Additionally, keep higher priority on the item's own allowChildren rules over inherited disallowChildren.
-		inheritedDisallowedChildren
-			?.filter( disallowedItemName => itemRule.allowChildren.indexOf( disallowedItemName ) === -1 )
+		inheritedDisallowedChildren!
+			.filter( disallowedItemName => itemRule.allowChildren.indexOf( disallowedItemName ) === -1 )
 			.forEach( disallowedItemName => {
 				const disallowedItem = compiledDefinitions[ disallowedItemName ];
 				if ( disallowedItem ) {

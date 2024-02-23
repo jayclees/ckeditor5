@@ -1979,7 +1979,7 @@ function compileAllowContentOf(
 		}
 
 		const inheritedAllowedChildren = getAllowedChildren( compiledDefinitions, allowContentOfItemName );
-		const inheritedDisallowedChildren = inheritFromItem.disallowChildren;
+		const inheritedDisallowedChildren = getDisallowedChildrenFromAllDefs( compiledDefinitions, allowContentOfItemName );
 
 		// First, add the item to each inherited allowed child, except:
 		// - the ones which are explicitly disallowed in the item,
@@ -1994,17 +1994,16 @@ function compileAllowContentOf(
 		// And then, run inherited disallowChildren rules to remove this item from them.
 		// Additionally, keep higher priority on the item's own allowChildren rules over inherited disallowChildren.
 		inheritedDisallowedChildren!
-			.filter( disallowedItemName => itemRule.allowChildren.indexOf( disallowedItemName ) === -1 )
-			.forEach( disallowedItemName => {
-				const disallowedItem = compiledDefinitions[ disallowedItemName ];
-				if ( disallowedItem ) {
-					const itemIndexInDisallowedItem = disallowedItem.allowIn!.indexOf( itemName );
+			.filter( disallowedItemRule => itemRule.allowChildren.indexOf( disallowedItemRule.name ) === -1 )
+			.forEach( disallowedItemRule => {
+				if ( disallowedItemRule ) {
+					const itemIndexInDisallowedItem = disallowedItemRule.allowIn!.indexOf( itemName );
 					if ( itemIndexInDisallowedItem !== -1 ) {
-						disallowedItem.allowIn.splice( itemIndexInDisallowedItem, 1 );
+						disallowedItemRule.allowIn.splice( itemIndexInDisallowedItem, 1 );
 					}
 
 					// Explicitly set `disallowIn` on the disallowedChild to prevent it being added through inheritance mechanisms.
-					disallowedItem.disallowIn!.push( itemName );
+					disallowedItemRule.disallowIn!.push( itemName );
 				}
 			} );
 	}
@@ -2018,12 +2017,6 @@ function compileDisallowChildren(
 ) {
 	const item = compiledDefinitions[ itemName ];
 	for ( const disallowedChild of item.disallowChildren! ) {
-		// const disallowedChildIndex = item.allowChildren.indexOf( disallowedChild );
-		// REMOVE
-		// if ( disallowedChildIndex !== -1 ) {
-		// 	item.allowChildren.splice( disallowedChildIndex, 1 );
-		// }
-
 		// Proceed to remove the item from the previously allowed children.
 		const disallowedChildDefinition = compiledDefinitions[ disallowedChild ];
 
@@ -2238,6 +2231,13 @@ function getAllowedChildren( compiledDefinitions: Record<string, SchemaCompiledI
 
 	return getValues( compiledDefinitions )
 		.filter( def => def.allowIn.includes( itemRule.name ) );
+}
+
+function getDisallowedChildrenFromAllDefs( compiledDefinitions: Record<string, SchemaCompiledItemDefinitionInternal>, itemName: string ) {
+	const itemRule = compiledDefinitions[ itemName ];
+
+	return getValues( compiledDefinitions )
+		.filter( def => def.disallowIn!.includes( itemRule.name ) );
 }
 
 function getValues( obj: Record<string, SchemaCompiledItemDefinitionInternal> ) {

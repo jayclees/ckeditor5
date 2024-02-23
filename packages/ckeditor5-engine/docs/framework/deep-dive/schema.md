@@ -71,6 +71,62 @@ Both the `{@link module:engine/model/schema~SchemaItemDefinition#allowIn}` and `
 	You can read more about the format of the item definition in the {@link module:engine/model/schema~SchemaItemDefinition} API guide.
 </info-box>
 
+## Disallowing structures
+
+The schema, in addition to allowing certain structures, can be also used to ensure some structures are explicitly disallowed. This can be achieved with the use of disallow rules.
+
+The most standard property for that is {@link module:engine/model/schema~SchemaItemDefinition#disallowChildren}. This is used to define which nodes are disallowed inside the registered element:
+
+```js
+schema.register( 'myElement', {
+	disallowChildren: '$text'
+} )
+```
+
+While this rule used alone might not make sense, as you'd achieve the same effect simply by not setting any `allowChildren` on `myElement`, when it comes to practical use, the more realistic example should be considered:
+
+```js
+schema.register( '$block', {
+	...
+	allowChildren: '$text'
+	...
+} )
+
+schema.register( 'myElement', {
+	allowContentOf: '$block',
+	disallowChildren: '$text'
+} )
+```
+
+Now it starts to make sense - `myElement` can inherit all children from the `$block` element, while disallowing some specific nodes.
+
+### Precedence over allow rules
+
+In general, all `disallow` rules have higher priority than their `allow` counterparts. When we also take inheritance into the picture, the hierarchy of rules looks like this (1. is the highest priority):
+
+1. `disallowChildren` / `disallowIn` from the element's own definition
+2. `allowChildren` / `allowIn` from the element's own definition
+3. `disallowChildren` / `disallowIn` from the inherited element's definition
+4. `allowChildren` / `allowIn` from the inherited element's definition
+
+The element's own `allowChildren` is more important than the inherited `disallowChildren` because it must be possible to reallow nodes on descendant elements.
+
+### Disallow rules and inheritance
+
+While disallowing structures in an element using simple inherit properties seems easy to understand, things might start to get unclear when more complex rules are involved. Consider this example:
+
+```js
+
+```
+
+<!--
+## children
+- disallowing specific item which inherits from a base item, in items which all are allowed in that base item.
+- disallowing the item to be included in some item (disallowIn) while another items inherit from this disallowed item.
+TODO
+-->
+
+
 ## Defining additional semantics
 
 In addition to setting allowed structures, the schema can also define additional traits of model elements. By using the `is*` properties, a feature author may declare how a certain element should be treated by other features and by the engine.

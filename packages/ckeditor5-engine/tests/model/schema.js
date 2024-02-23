@@ -3053,11 +3053,12 @@ describe( 'Schema', () => {
 				expect( schema.checkChild( root1, descElem2 ) ).to.be.false;
 			} );
 
-			it( 'should disallow inlineSpecificItem in inherited definitions but allow the base $inlineElement', () => {
+			it( 'should disallow inlineSpecificItem as children in paragraph and descendants but allow the base $inlineElement', () => {
 				schema.register( '$root' );
 
-				/* The case here: ensure that item inheriting from some base item
-				 * is disallowed in other items which disallow it (prevent from inheriting allows and omitting specific disallows).
+				/* The case here: ensure that item (inlineSpecificItem) inheriting from a base item
+				 * is disallowed in other items which allow base item but disallow this specific item
+				 * (prevent from inheriting allows and omitting specific disallows).
 				 */
 
 				schema.register( '$base', {
@@ -3091,10 +3092,45 @@ describe( 'Schema', () => {
 				expect( schema.checkChild( pB, inlineElem ) ).to.be.true;
 				expect( schema.checkChild( pB, inlineSpecific ) ).to.be.false;
 			} );
-			// disallow item inheriting some allowIns, when one of the allowIn items disallows the specific item (like imageInline)
-			//   via disallowChildren
-			// disallow item inheriting allowChildren, when one of the allowChildren items disallows to be placed in the spec. item
-			//   via disallowIn
+
+			it( 'should disallow inlineSpecificItem in all paragraph and descendants (with disallowIn)', () => {
+				schema.register( '$root' );
+
+				/* The case here: ensure that item (inlineSpecificItem) inheriting from a base item
+				 * is disallowed in other items which allow its base item, when it has disallowIn rule containing these.
+				 */
+
+				schema.register( '$base', {
+					allowIn: '$root'
+				} );
+				schema.register( '$inlineElement', {
+					allowIn: '$root'
+				} );
+				schema.register( 'inlineSpecificItem', {
+					inheritAllFrom: '$inlineElement',
+					disallowIn: 'paragraph'
+				} );
+				schema.register( 'paragraph', { inheritAllFrom: '$base', allowChildren: '$inlineElement' } );
+				schema.register( 'paragraphDescendantA', { inheritAllFrom: 'paragraph' } );
+				schema.register( 'paragraphDescendantB', { inheritAllFrom: 'paragraphDescendantA' } );
+
+				const inlineElem = new Element( '$inlineElement' );
+				const inlineSpecific = new Element( 'inlineSpecificItem' );
+				const pA = new Element( 'paragraphDescendantA' );
+				const pB = new Element( 'paragraphDescendantB' );
+
+				root1._appendChild( pA );
+				root1._appendChild( pB );
+				pA._appendChild( inlineElem );
+				pA._appendChild( inlineSpecific );
+				pB._appendChild( inlineElem );
+				pB._appendChild( inlineSpecific );
+
+				expect( schema.checkChild( pA, inlineElem ) ).to.be.true;
+				expect( schema.checkChild( pA, inlineSpecific ) ).to.be.false;
+				expect( schema.checkChild( pB, inlineElem ) ).to.be.true;
+				expect( schema.checkChild( pB, inlineSpecific ) ).to.be.false;
+			} );
 			// allow again some item when inherited disallow, but in the item it is allowed again allowChildren
 			// allow again also inheriting items (B from A) on an inherited item (Z from Y) if this item (Z) reallows parent item (A)
 

@@ -3053,7 +3053,8 @@ describe( 'Schema', () => {
 				expect( schema.checkChild( root1, descElem2 ) ).to.be.false;
 			} );
 
-			it( 'should disallow inlineSpecificItem as children in paragraph and descendants but allow the base $inlineElement', () => {
+			it( `should disallow inlineSpecificItem and its descendants 
+			in paragraph and descendants but allow the base $inlineElement`, () => {
 				schema.register( '$root' );
 
 				/* The case here: ensure that item (inlineSpecificItem) inheriting from a base item
@@ -3071,12 +3072,16 @@ describe( 'Schema', () => {
 				schema.register( 'inlineSpecificItem', {
 					inheritAllFrom: '$inlineElement'
 				} );
+				schema.register( 'inlineMoreSpecificItem', {
+					inheritAllFrom: 'inlineSpecificItem'
+				} );
 				schema.register( 'paragraph', { inheritAllFrom: '$base', disallowChildren: 'inlineSpecificItem' } );
 				schema.register( 'paragraphDescendantA', { inheritAllFrom: 'paragraph' } );
 				schema.register( 'paragraphDescendantB', { inheritAllFrom: 'paragraphDescendantA' } );
 
 				const inlineElem = new Element( '$inlineElement' );
 				const inlineSpecific = new Element( 'inlineSpecificItem' );
+				const inlineMoreSpecific = new Element( 'inlineMoreSpecificItem' );
 				const pA = new Element( 'paragraphDescendantA' );
 				const pB = new Element( 'paragraphDescendantB' );
 
@@ -3085,14 +3090,17 @@ describe( 'Schema', () => {
 
 				expect( schema.checkChild( pA, inlineElem ) ).to.be.true;
 				expect( schema.checkChild( pA, inlineSpecific ) ).to.be.false;
+				expect( schema.checkChild( pA, inlineMoreSpecific ) ).to.be.false;
 				expect( schema.checkChild( pB, inlineElem ) ).to.be.true;
 				expect( schema.checkChild( pB, inlineSpecific ) ).to.be.false;
+				expect( schema.checkChild( pB, inlineMoreSpecific ) ).to.be.false;
 			} );
 
-			it( 'should disallow inlineSpecificItem in all paragraph and descendants (with disallowIn)', () => {
+			it( 'should disallow inlineSpecificItem and its descendants in all paragraph and descendants (with disallowIn)', () => {
 				schema.register( '$root' );
 
-				/* The case here: ensure that item (inlineSpecificItem) inheriting from a base item
+				/**
+				 * The case here: ensure that item (inlineSpecificItem) inheriting from a base item
 				 * is disallowed in other items which allow its base item, when it has disallowIn rule containing these.
 				 */
 
@@ -3106,12 +3114,16 @@ describe( 'Schema', () => {
 					inheritAllFrom: '$inlineElement',
 					disallowIn: 'paragraph'
 				} );
+				schema.register( 'inlineMoreSpecificItem', {
+					inheritAllFrom: 'inlineSpecificItem'
+				} );
 				schema.register( 'paragraph', { inheritAllFrom: '$base', allowChildren: '$inlineElement' } );
 				schema.register( 'paragraphDescendantA', { inheritAllFrom: 'paragraph' } );
 				schema.register( 'paragraphDescendantB', { inheritAllFrom: 'paragraphDescendantA' } );
 
 				const inlineElem = new Element( '$inlineElement' );
 				const inlineSpecific = new Element( 'inlineSpecificItem' );
+				const inlineMoreSpecific = new Element( 'inlineMoreSpecificItem' );
 				const pA = new Element( 'paragraphDescendantA' );
 				const pB = new Element( 'paragraphDescendantB' );
 
@@ -3120,8 +3132,10 @@ describe( 'Schema', () => {
 
 				expect( schema.checkChild( pA, inlineElem ) ).to.be.true;
 				expect( schema.checkChild( pA, inlineSpecific ) ).to.be.false;
+				expect( schema.checkChild( pA, inlineMoreSpecific ) ).to.be.false;
 				expect( schema.checkChild( pB, inlineElem ) ).to.be.true;
 				expect( schema.checkChild( pB, inlineSpecific ) ).to.be.false;
+				expect( schema.checkChild( pB, inlineMoreSpecific ) ).to.be.false;
 			} );
 
 			it( 'should reallow an item again if disallowed higher in the inheritance hierarchy', () => {

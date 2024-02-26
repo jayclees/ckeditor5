@@ -98,7 +98,7 @@ schema.register( 'myElement', {
 } )
 ```
 
-Now it starts to make sense - `myElement` can inherit all children from the `$block` element, while disallowing some specific nodes.
+Now it starts to make sense - `myElement` can inherit all children from the `$block` element, but it will disallow some specific nodes.
 
 ### Precedence over allow rules
 
@@ -111,20 +111,51 @@ In general, all `disallow` rules have higher priority than their `allow` counter
 
 The element's own `allowChildren` is more important than the inherited `disallowChildren` because it must be possible to reallow nodes on descendant elements.
 
-### Disallow rules and inheritance
+### Disallow rules examples
 
 While disallowing structures in an element using simple inherit properties seems easy to understand, things might start to get unclear when more complex rules are involved. Consider this example:
 
 ```js
+schema.register( '$baseItem', { allowChildren: 'baseParagraph' } );
 
+schema.register( 'extendedItem', { inheritAllFrom: '$baseItem' } );
+
+schema.register( 'baseParagraph' );
+schema.register( 'extendedParagraph', { inheritAllFrom: 'baseParagraph', disallowIn: 'extendedItem' } );
 ```
 
-<!--
-## children
-- disallowing specific item which inherits from a base item, in items which all are allowed in that base item.
-- disallowing the item to be included in some item (disallowIn) while another items inherit from this disallowed item.
-TODO
--->
+This is not a straightforward situation as `extendedItem` inherits from `$baseItem` while none of the two have explicitly disallowed any of the paragraph items. However, the `extendedParagraph` itself is disallowed in `extendedItem`, so it will be accepted in the `$baseItem`, but rejected in `extendedItem`.
+
+A complementary example is when some definition uses `disallowChildren`:
+
+```js
+schema.register( '$baseItem' );
+
+schema.register( 'extendedItem', { inheritAllFrom: '$baseItem', disallowChildren: 'extendedHeading' } );
+
+schema.register( 'baseHeading', { allowIn: '$baseItem' } );
+schema.register( 'extendedHeading', { inheritAllFrom: 'baseHeading' } );
+```
+
+In this case, `extendedHeading` will be disallowed in `extendedItem`, but will stay allowed, as its ancestor, in the `$baseItem`.
+
+
+An example also worth mentioning is, when you want to inherit from an item which already disallows some other type of item, but then in your descendant element you want to allow this item again. In this case the definitions should look like this:
+
+```js
+schema.register( 'rootElement', { allowChildren: [ 'someItem' ] } );
+schema.register( 'extendingElement', { inheritAllFrom: 'rootElement', disallowChildren: [ 'someItem' ] } );
+schema.register( 'deepExtendingElement' );
+```
+
+It will work the same with the `allowIn` / `disallowIn` properties as well.
+
+One last situation to consider is the following:
+- `itemY` inherits all from `itemX`,
+- `containerB` inherits all from `containerA`,
+- `containerA` disallows children `itemX`.
+
+In this case, both `itemX` and `itemY` are disallowed in both container types. But then we want to have a `containerC`, which inherits from `containerB`, but reallows `itemX` as children. The outcome is that `containerC` will allow for both `itemX` and `itemY`, since no explicit rule excluded the `itemY` anywhere.
 
 
 ## Defining additional semantics

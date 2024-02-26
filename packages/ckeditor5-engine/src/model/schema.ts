@@ -1997,12 +1997,6 @@ function compileAllowContentOf(
 			.filter( disallowedItemRule => itemRule.allowChildren.indexOf( disallowedItemRule.name ) === -1 )
 			.forEach( disallowedItemRule => {
 				if ( disallowedItemRule ) {
-					const itemIndexInDisallowedItem = disallowedItemRule.allowIn!.indexOf( itemName );
-					if ( itemIndexInDisallowedItem !== -1 ) {
-						disallowedItemRule.allowIn.splice( itemIndexInDisallowedItem, 1 );
-					}
-
-					// Explicitly set `disallowIn` on the disallowedChild to prevent it being added through inheritance mechanisms.
 					disallowedItemRule.disallowIn!.push( itemName );
 				}
 			} );

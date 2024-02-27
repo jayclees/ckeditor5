@@ -2943,6 +2943,37 @@ describe( 'Schema', () => {
 		} );
 
 		describe( 'disallow rules - children', () => {
+			it( 'does not break and does not keep the value when used disallowChildren pointing to a non-registered element', () => {
+				schema.register( '$root' );
+				schema.register( 'paragraph', {
+					allowIn: '$root',
+					allowChildren: [ '$root' ],
+					disallowChildren: [ 'not-existing-elem' ]
+				} );
+
+				const notExisting = new Element( 'not-existing-elem' );
+				r1p1._appendChild( notExisting );
+
+				expect( schema.checkChild( root1, r1p1 ) ).to.be.true;
+				expect( schema.checkChild( r1p1, notExisting ) ).to.be.false;
+			} );
+
+			it( 'does not break and does not keep the value when used disallowIn pointing to a non-registered element', () => {
+				schema.register( '$root' );
+				schema.register( 'paragraph', {
+					allowIn: '$root',
+					allowChildren: [ '$root' ],
+					disallowIn: [ 'not-existing-elem' ]
+				} );
+
+				const notExisting = new Element( 'not-existing-elem' );
+				const p = new Element( 'paragraph' );
+				root1._appendChild( notExisting );
+
+				expect( schema.checkChild( root1, r1p1 ) ).to.be.true;
+				expect( schema.checkChild( notExisting, p ) ).to.be.false;
+			} );
+
 			it( 'disallows paragraph in a blockQuote with disallowChildren rule', () => {
 				schema.register( '$root' );
 
